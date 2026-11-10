@@ -7,4 +7,4 @@ else:return "Ainda estou aprendendo.pode perguntar outra coisa!"
 print("Digite sair para encerrar.")
 while True: pergunta= input("Você:")
   if pergunta.lower()=="sair":print("MinhaIA: Até logo!")
-    break resposta=responder) pergunta)print("MinhaIA:", resposta)
+    break resposta=responder( pergunta)print("MinhaIA:", resposta)
