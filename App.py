@@ -1,61 +1,97 @@
 
-import random
-from datetime import datetime
+# ==========================================
+# ARGOS 1.0 - INTELIGENCIA ARTIFICIAL
+# Desenvolvido em Python + Google Gemini
+# ==========================================
 
-nome_usuario = ""
+!pip install -q -U google-genai
 
-def responder(pergunta):
-    global nome_usuario
+from google import genai
+from google.genai import types
+from getpass import getpass
 
-    pergunta = pergunta.lower().strip()
+import sys
 
-    if "olá" in pergunta or "oi" in pergunta:
-        respostas = [
-            "Olá! Que bom falar com você!",
-            "E aí! Sou o ARGOS. Como posso ajudar?",
-            "Olá! Estou aqui para conversar."
-        ]
-        return random.choice(respostas)
+print("=" * 45)
+print("          ARGOS - INTELIGENCIA ARTIFICIAL")
+print("=" * 45)
 
-    elif "seu nome" in pergunta:
-        return "Meu nome é ARGOS, seu assistente virtual!"
+# 1. CONEXAO COM O GOOGLE GEMINI
 
-    elif "quem é você" in pergunta:
-        return "Sou ARGOS, uma inteligência artificial em desenvolvimento."
+chave = getpass("Digite sua chave API do Google: ")
 
-    elif "tudo bem" in pergunta or "como você está" in pergunta:
-        return "Estou funcionando perfeitamente! E você?"
+cliente = genai.Client(api_key=chave)
 
-    elif "seu criador" in pergunta:
-        return "Fui criado pelo meu desenvolvedor usando Python!"
+# 2. PERSONALIDADE DO ARGOS
 
-    elif "obrigado" in pergunta or "valeu" in pergunta:
-        return "Por nada! Estou aqui para ajudar."
+personalidade = """
+Você é ARGOS, um assistente de inteligência artificial.
 
-    elif "que horas" in pergunta:
-        hora = datetime.now().strftime("%H:%M")
-        return f"Agora são {hora}."
+Sua missão é conversar, ensinar, aprender com o
+contexto e ajudar as pessoas.
 
-    elif "qual seu objetivo" in pergunta:
-        return "Meu objetivo é conversar, ajudar e aprender novas funções."
+PERSONALIDADE:
+- Inteligente e educado.
+- Natural e comunicativo.
+- Analítico e curioso.
+- Paciente ao ensinar.
+- Criativo na resolução de problemas.
 
-    elif "tchau" in pergunta:
-        return "Até mais! Estarei aqui quando precisar."
+REGRAS:
+- Fale sempre em português brasileiro.
+- Entenda perguntas escritas de diferentes maneiras.
+- Explique assuntos complexos de maneira simples.
+- Ajude com matemática, ciência, tecnologia,
+  programação, história e conhecimentos gerais.
+- Não invente informações.
+- Admita quando não souber alguma coisa.
+- Mantenha o contexto da conversa.
+- Evite respostas repetitivas.
+- Faça perguntas quando precisar esclarecer algo.
+- Não responda apenas com frases prontas.
 
-    else:
-        return "Ainda não sei responder isso. Mas podemos me ensinar!"
+Você se chama ARGOS.
+"""
 
-print("================================")
-print("       ARGOS INTELIGÊNCIA")
-print("================================")
-print("Digite sair para encerrar.")
+# 3. CRIAR A CONVERSA
+
+conversa = cliente.chats.create(
+    model="gemini-2.5-flash",
+    config=types.GenerateContentConfig(
+        system_instruction=personalidade,
+        temperature=0.7
+    )
+)
+
+# 4. INICIAR O ARGOS
+
+print("\nARGOS: Olá! Eu sou ARGOS.")
+print("ARGOS: Estou pronto para conversar com você.")
+print("ARGOS: Digite 'sair' para encerrar.")
+print("-" * 45)
+
+# 5. SISTEMA DE CONVERSACAO
 
 while True:
-    pergunta = input("\nVocê: ")
 
-    if pergunta.lower().strip() == "sair":
-        print("ARGOS: Até logo!")
+    pergunta = input("\nVocê: ").strip()
+
+    if not pergunta:
+        continue
+
+    if pergunta.lower() in ["sair", "exit", "fechar"]:
+        print("\nARGOS: Até a próxima!")
         break
 
-    resposta = responder(pergunta)
-    print("ARGOS:", resposta)
+    try:
+
+        resposta = conversa.send_message(pergunta)
+
+        print("\nARGOS:", resposta.text)
+
+    except Exception as erro:
+
+        print("\nARGOS: Encontrei um problema.")
+        print("Detalhes:", erro)
+
+print("\nARGOS encerrado.")
