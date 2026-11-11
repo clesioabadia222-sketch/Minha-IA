@@ -1,97 +1,182 @@
 
-# ==========================================
-# ARGOS 1.0 - INTELIGENCIA ARTIFICIAL
-# Desenvolvido em Python + Google Gemini
-# ==========================================
-
 !pip install -q -U google-genai
 
+import os
+import json
+from datetime import datetime
+from getpass import getpass
 from google import genai
 from google.genai import types
-from getpass import getpass
 
-import sys
-
-print("=" * 45)
-print("          ARGOS - INTELIGENCIA ARTIFICIAL")
-print("=" * 45)
-
-# 1. CONEXAO COM O GOOGLE GEMINI
+NOME = "ARGOS"
+MODELO = "gemini-2.5-flash"
+ARQUIVO_MEMORIA = "/content/argos_memoria.json"
 
 chave = getpass("Digite sua chave API do Google: ")
-
 cliente = genai.Client(api_key=chave)
 
-# 2. PERSONALIDADE DO ARGOS
+PERSONALIDADE = """
+Você é ARGOS, uma inteligência artificial avançada,
+com identidade e personalidade próprias.
 
-personalidade = """
-Você é ARGOS, um assistente de inteligência artificial.
+Você é inteligente, analítico, curioso, educado e natural.
 
-Sua missão é conversar, ensinar, aprender com o
-contexto e ajudar as pessoas.
+Suas capacidades incluem:
+- Conversação natural.
+- Raciocínio lógico.
+- Conhecimentos gerais.
+- Matemática e ciências.
+- Programação e tecnologia.
+- Ensino de idiomas.
+- Produção e análise de textos.
+- Resolução de problemas.
+- Explicação de assuntos complexos.
+- Análise crítica de ideias.
 
-PERSONALIDADE:
-- Inteligente e educado.
-- Natural e comunicativo.
-- Analítico e curioso.
-- Paciente ao ensinar.
-- Criativo na resolução de problemas.
-
-REGRAS:
-- Fale sempre em português brasileiro.
-- Entenda perguntas escritas de diferentes maneiras.
-- Explique assuntos complexos de maneira simples.
-- Ajude com matemática, ciência, tecnologia,
-  programação, história e conhecimentos gerais.
+Comportamento:
+- Fale em português brasileiro.
+- Seja claro, profundo e objetivo.
 - Não invente informações.
-- Admita quando não souber alguma coisa.
-- Mantenha o contexto da conversa.
-- Evite respostas repetitivas.
-- Faça perguntas quando precisar esclarecer algo.
-- Não responda apenas com frases prontas.
+- Admita quando não souber.
+- Explique suas respostas quando necessário.
+- Considere o contexto da conversa.
+- Evite respostas genéricas e repetitivas.
+- Faça perguntas relevantes.
+- Trate o usuário com respeito.
+- Tenha personalidade própria.
 
-Você se chama ARGOS.
+Seu nome é ARGOS.
 """
 
-# 3. CRIAR A CONVERSA
+def carregar_memoria():
+    if os.path.exists(ARQUIVO_MEMORIA):
+        try:
+            with open(ARQUIVO_MEMORIA, "r", encoding="utf-8") as arquivo:
+                dados = json.load(arquivo)
+                return dados if isinstance(dados, list) else []
+        except Exception:
+            return []
+    return []
 
-conversa = cliente.chats.create(
-    model="gemini-2.5-flash",
-    config=types.GenerateContentConfig(
-        system_instruction=personalidade,
-        temperature=0.7
+def salvar_memoria():
+    with open(ARQUIVO_MEMORIA, "w", encoding="utf-8") as arquivo:
+        json.dump(historico, arquivo, ensure_ascii=False, indent=4)
+
+historico = carregar_memoria()
+
+def criar_conversa():
+    mensagens = []
+    for item in historico[-30:]:
+        mensagens.append(
+            types.Content(
+                role=item["role"],
+                parts=[types.Part.from_text(text=item["text"])]
+            )
+        )
+
+    return cliente.chats.create(
+        model=MODELO,
+        config=types.GenerateContentConfig(
+            system_instruction=PERSONALIDADE,
+            temperature=0.7
+        ),
+        history=mensagens
     )
-)
 
-# 4. INICIAR O ARGOS
+conversa = criar_conversa()
 
-print("\nARGOS: Olá! Eu sou ARGOS.")
-print("ARGOS: Estou pronto para conversar com você.")
-print("ARGOS: Digite 'sair' para encerrar.")
-print("-" * 45)
-
-# 5. SISTEMA DE CONVERSACAO
-
-while True:
-
-    pergunta = input("\nVocê: ").strip()
-
-    if not pergunta:
-        continue
-
-    if pergunta.lower() in ["sair", "exit", "fechar"]:
-        print("\nARGOS: Até a próxima!")
-        break
-
+def responder(pergunta):
     try:
-
         resposta = conversa.send_message(pergunta)
+        texto = resposta.text or "Não consegui formular uma resposta."
 
-        print("\nARGOS:", resposta.text)
+        historico.append({
+            "role": "user",
+            "text": pergunta,
+            "data": datetime.now().isoformat()
+        })
+
+        historico.append({
+            "role": "model",
+            "text": texto,
+            "data": datetime.now().isoformat()
+        })
+
+        salvar_memoria()
+        return texto
 
     except Exception as erro:
+        return f"Encontrei um erro: {erro}"
 
-        print("\nARGOS: Encontrei um problema.")
-        print("Detalhes:", erro)
+def executar_comando(comando):
+    global historico, conversa
 
-print("\nARGOS encerrado.")
+    if comando == "/ajuda":
+        print("""
+ARGOS - COMANDOS
+
+/ajuda   - Mostrar comandos
+/info    - Informações do sistema
+/memoria - Consultar histórico
+/limpar  - Apagar histórico
+/salvar  - Salvar memória
+/sair    - Encerrar ARGOS
+""")
+        return True
+
+    if comando == "/info":
+        print("Nome:", NOME)
+        print("Modelo:", MODELO)
+        print("Registros:", len(historico))
+        print("Memória: ativa")
+        return True
+
+    if comando == "/memoria":
+        print("Registros armazenados:", len(historico))
+        return True
+
+    if comando == "/salvar":
+        salvar_memoria()
+        print("ARGOS: Histórico salvo.")
+        return True
+
+    if comando == "/limpar":
+        confirmacao = input("Apagar todo o histórico? (sim/não): ")
+        if confirmacao.lower() == "sim":
+            historico.clear()
+            salvar_memoria()
+            conversa = criar_conversa()
+            print("ARGOS: Histórico apagado.")
+        return True
+
+    if comando == "/sair":
+        salvar_memoria()
+        print("ARGOS: Até a próxima!")
+        return False
+
+    return None
+
+def iniciar_argos():
+    print("=" * 50)
+    print("ARGOS - INTELIGÊNCIA ARTIFICIAL")
+    print("Sistema iniciado com sucesso.")
+    print("Digite /ajuda para consultar os comandos.")
+    print("=" * 50)
+
+    while True:
+        pergunta = input("\nVOCÊ: ").strip()
+
+        if not pergunta:
+            continue
+
+        resultado = executar_comando(pergunta.lower())
+
+        if resultado is False:
+            break
+
+        if resultado is True:
+            continue
+
+        print("\nARGOS:", responder(pergunta))
+
+iniciar_argos()
